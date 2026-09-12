@@ -103,3 +103,56 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_evitar_ciclo
 BEFORE INSERT OR UPDATE ON categorias
 FOR EACH ROW EXECUTE FUNCTION evitar_ciclo_categorias();
+
+SET search_path TO prototipo, public;
+--Nuevas tablas creadas por Jimena!!!!!!!!!!!!!!!!!!!!
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE TABLE ubicaciones (
+id_ubicacion  SERIAL PRIMARY KEY,
+nombre VARCHAR(80) NOT NULL,
+direccion VARCHAR(100) NOT NULL,
+ciudad VARCHAR(60) NOT NULL,
+capacidad INT NOT NULL CHECK (capacidad > 0)
+);
+CREATE TABLE tipos_disponibilidad (
+id_tipo  SERIAL PRIMARY KEY,
+nombre VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE disponibilidades (
+id_disponibilidad SERIAL PRIMARY KEY,
+fecha DATE NOT NULL,
+hora_inicio TIME NOT NULL,
+hora_fin TIME NOT NULL,
+id_usuario INT NOT NULL REFERENCES usuarios(id_usuario),
+id_tipo INT NOT NULL REFERENCES tipos_disponibilidad (id_tipo),
+CONSTRAINT check_horas CHECK (hora_fin > hora_inicio)
+);
+
+CREATE TABLE tareas (
+id_tarea SERIAL PRIMARY KEY,
+titulo VARCHAR(50) NOT NULL,
+descripción VARCHAR(100),
+prioridad VARCHAR(10) NOT NULL CHECK (prioridad IN ('baja', 'media', 'alta')),
+fecha_limite DATE NOT NULL,
+estados VARCHAR(15) NOT NULL DEFAULT 'pendiente' CHECK (estados IN ('pendiente', 'en progreso', 'completada', 'vencida')),
+id_usuario INT NOT NULL REFERENCES usuarios(id_usuario),
+id_eventos INT NOT NULL REFERENCES eventos(id_evento)
+);
+--Para completar RF-08/RF-09 (conectar eventos con ubicaciones)
+ALTER TABLE eventos
+ADD COLUMN id_ubicacion INT REFERENCES ubicaciones(id_ubicacion);
+
+ALTER TABLE eventos
+ADD CONSTRAINT no_eventos_simultaneos
+EXCLUDE USING gist (
+id_ubicacion WITH =,
+tsrange(fecha_inicio, fecha_fin) WITH &&
+    );
+
+ALTER TABLE disponibilidades
+ADD CONSTRAINT no_disponibilidades_simultaneas
+EXCLUDE USING gist (
+id_usuario WITH =,
+tsrange(fecha + hora_inicio, fecha + hora_fin) WITH &&
+);
