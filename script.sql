@@ -136,7 +136,7 @@ titulo VARCHAR(50) NOT NULL,
 descripción VARCHAR(100),
 prioridad VARCHAR(10) NOT NULL CHECK (prioridad IN ('baja', 'media', 'alta')),
 fecha_limite DATE NOT NULL,
-estados VARCHAR(15) NOT NULL DEFAULT 'pendiente' CHECK (estados IN ('pendiente', 'en progreso', 'completada', 'vencida')),
+estados VARCHAR(15) NOT NULL DEFAULT 'pendiente' CHECK (estados IN ('pendiente', 'en progreso', 'completada', 'cancelada')),
 id_usuario INT NOT NULL REFERENCES usuarios(id_usuario),
 id_eventos INT NOT NULL REFERENCES eventos(id_evento)
 );
@@ -157,3 +157,4 @@ EXCLUDE USING gist (
 id_usuario WITH =,
 tsrange(fecha + hora_inicio, fecha + hora_fin) WITH &&
 );
+

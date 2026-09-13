@@ -34,6 +34,7 @@ class AppAgenda(ctk.CTk):
         self.usuarios_combo = {}
         self.categorias_combo = {}
         self.categorias_padre_combo = {}
+        self.ubicaciones_combo = {} #Agregado por Jimena por el RF-08
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -131,6 +132,7 @@ class AppAgenda(ctk.CTk):
             ("Usuarios", "👥"),
             ("Categorías", "📁"),
             ("Eventos", "🗓️"),
+            ("Ubicaciones", "-"), #Agregado por Jimena por el RF-08
         ], start=2):
             btn = ctk.CTkButton(
                 self.sidebar_frame, text=f"{icono}  {nombre}",
@@ -144,7 +146,7 @@ class AppAgenda(ctk.CTk):
             self.sidebar_frame,
             text="🔄  Recargar datos",
             command=self.actualizar_todas_las_tablas
-        ).grid(row=5, column=0, padx=15, pady=(20, 5), sticky="ew")
+        ).grid(row=6, column=0, padx=15, pady=(20, 5), sticky="ew")
 
         ctk.CTkLabel(self.sidebar_frame, text="APARIENCIA", font=ctk.CTkFont(size=11, weight="bold")).grid(
             row=11, column=0, padx=20, pady=(10, 5), sticky="w"
@@ -169,10 +171,12 @@ class AppAgenda(ctk.CTk):
         self.tab_usuarios = self.tabview.add("Usuarios")
         self.tab_categorias = self.tabview.add("Categorías")
         self.tab_eventos = self.tabview.add("Eventos")
+        self.tab_ubicaciones = self.tabview.add("Ubicaciones") #Agregado por Jimena por el RF-08
 
         self.configurar_pestana_usuarios()
         self.configurar_pestana_categorias()
         self.configurar_pestana_eventos()
+        self.configurar_pestana_ubicaciones()  #Agregado por Jimena por el RF-08
         self.seleccionar_modulo("Usuarios")
 
     def al_cambiar_pestana(self):
@@ -225,8 +229,6 @@ class AppAgenda(ctk.CTk):
         ctk.CTkButton(form, text="💾 Actualizar seleccionado", command=self.actualizar_usuario).pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(form, text="🧹 Nuevo / Limpiar", command=self.limpiar_form_usuario, fg_color="gray").pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(form, text="🗑️ Eliminar seleccionado", command=self.eliminar_usuario, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
-
-        #NUEVO - AGREGADO POR EL MODULO DE GESTION DE UBICACIONES (RF-09) - JIMENA ARAYA SING 
 
 
     def usuario_seleccionado_id(self):
@@ -424,6 +426,137 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             print(f"Error cargando categorías: {e}")
 
+ # -------------------- UBICACIONES (#Agregado por Jimena por el RF-08) --------------------
+    def configurar_pestana_ubicaciones (self):
+        self.crear_encabezado(self.tab_ubicaciones,"Ubicaciones", "Administra los recintos físicos donde se realizan los eventos.")
+        cuerpo = ctk.CTkFrame(self.tab_ubicaciones, fg_color="transparent")
+        cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
+        cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1)
+        cuerpo.grid_rowconfigure(0, weight=1)
+
+        tabla = ctk.CTkFrame(cuerpo); tabla.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        form = ctk.CTkScrollableFrame(cuerpo, width=320); form.grid(row=0, column=1, sticky="nsew")
+
+        self.tree_ubicaciones = self.crear_treeview(
+        tabla, ("ID", "Nombre", "Dirección", "Ciudad", "Capacidad"),
+        (60, 150, 200, 120, 90))
+
+        self.tree_ubicaciones.bind("<<TreeviewSelect>>", self.cargar_ubicacion_seleccionada)
+
+        ctk.CTkLabel(form, text="Formulario de ubicación", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 15))
+        self.entry_ubi_nombre = ctk.CTkEntry(form, placeholder_text="Nombre del recinto")
+        self.entry_ubi_nombre.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_direccion = ctk.CTkEntry(form, placeholder_text="Dirección")
+        self.entry_ubi_direccion.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_ciudad = ctk.CTkEntry(form, placeholder_text="Ciudad")
+        self.entry_ubi_ciudad.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_capacidad = ctk.CTkEntry(form, placeholder_text="Capacidad")
+        self.entry_ubi_capacidad.pack(fill="x", padx=10, pady=6)
+
+        ctk.CTkButton(form, text="Registrar ubicación", command=self.agregar_ubicacion).pack(fill="x", padx=10, pady=(15, 5))
+        ctk.CTkButton(form, text="Actualizar seleccionada", command=self.actualizar_ubicacion).pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="Nueva / Limpiar", command=self.limpiar_form_ubicacion, fg_color="gray").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="Eliminar seleccionada", command=self.eliminar_ubicacion,
+                  fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+        
+    def ubicacion_seleccionada_id(self):
+        sel = self.tree_ubicaciones.selection()
+        return self.tree_ubicaciones.item(sel[0])["values"][0] if sel else None
+
+    def cargar_ubicacion_seleccionada(self, _=None):
+        sel = self.tree_ubicaciones.selection()
+        if not sel:
+            return
+        vals = self.tree_ubicaciones.item(sel[0])["values"]
+        self.entry_ubi_nombre.delete(0, tk.END); self.entry_ubi_nombre.insert(0, vals[1])
+        self.entry_ubi_direccion.delete(0, tk.END); self.entry_ubi_direccion.insert(0, vals[2])
+        self.entry_ubi_ciudad.delete(0, tk.END); self.entry_ubi_ciudad.insert(0, vals[3])
+        self.entry_ubi_capacidad.delete(0, tk.END); self.entry_ubi_capacidad.insert(0, vals[4])
+
+    def limpiar_form_ubicacion(self):
+        self.tree_ubicaciones.selection_remove(self.tree_ubicaciones.selection())
+        self.entry_ubi_nombre.delete(0, tk.END)
+        self.entry_ubi_direccion.delete(0, tk.END)
+        self.entry_ubi_ciudad.delete(0, tk.END)
+        self.entry_ubi_capacidad.delete(0, tk.END)
+
+    def _datos_ubicacion_formulario(self):
+        nombre = self.entry_ubi_nombre.get().strip()
+        direccion = self.entry_ubi_direccion.get().strip()
+        ciudad = self.entry_ubi_ciudad.get().strip()
+        capacidad = self.entry_ubi_capacidad.get().strip()
+        if not nombre or not direccion or not ciudad or not capacidad:
+            raise ValueError("Todos los campos son obligatoriosS")
+        if not capacidad.isdigit() or int(capacidad) <= 0:
+            raise ValueError("La capacidad debe ser un número entero mayor a 0.")
+        return nombre, direccion, ciudad, int(capacidad)
+
+    def agregar_ubicacion(self): #Este bloque lo que hace es que guarda una nueva ubicación en la base de datos utilizando los datos de un formulario y actualiza la interfaz gráfica :p
+        try:
+            datos = self._datos_ubicacion_formulario()
+            self.ejecutar_consulta(
+                "INSERT INTO ubicaciones (nombre, direccion, ciudad, capacidad) VALUES (%s, %s, %s, %s)",
+                datos
+            )
+            self.limpiar_form_ubicacion(); self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Ubicación registrada correctamente.")
+        except ValueError as e:
+            messagebox.showwarning("Datos inválidos", str(e))
+        except Exception as e:
+            messagebox.showerror("Error de base de datos", str(e))
+
+    def actualizar_ubicacion(self):
+        uid = self.ubicacion_seleccionada_id()
+        if uid is None:
+            return messagebox.showwarning("Selección requerida", "Selecciona una ubicación para actualizar.")
+        try:
+            nombre, direccion, ciudad, capacidad = self._datos_ubicacion_formulario()
+            self.ejecutar_consulta(
+                "UPDATE ubicaciones SET nombre=%s, direccion=%s, ciudad=%s, capacidad=%s WHERE id_ubicacion=%s",
+                (nombre, direccion, ciudad, capacidad, uid)
+            )
+            self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Ubicación actualizada.")
+        except ValueError as e:
+            messagebox.showwarning("Datos inválidos", str(e))
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def eliminar_ubicacion(self):
+            uid = self.ubicacion_seleccionada_id()
+            if uid is None:
+                return messagebox.showwarning("Selección requerida", "Selecciona una ubicación.")
+            if not messagebox.askyesno("Confirmar", "¿Eliminar la ubicación seleccionada?"):
+                return
+            try:
+                self.ejecutar_consulta("DELETE FROM ubicaciones WHERE id_ubicacion=%s", (uid,))
+                self.limpiar_form_ubicacion(); self.actualizar_todas_las_tablas()
+                messagebox.showinfo("Eliminado", "Ubicación eliminada.")
+            except psycopg2.errors.ForeignKeyViolation:
+                messagebox.showerror(
+                    "No se puede eliminar",
+                    "Esta ubicación ya tiene eventos asociados.Tiene que eliminar esos eventos primero."
+                )
+            except Exception as e:
+                    messagebox.showerror("No se pudo eliminar", str(e))
+
+    def cargar_datos_ubicaciones(self):
+            try:
+                rows = self.ejecutar_consulta(
+                    "SELECT id_ubicacion, nombre, direccion, ciudad, capacidad FROM ubicaciones ORDER BY nombre",
+                    fetch=True
+                )
+                for item in self.tree_ubicaciones.get_children():
+                    self.tree_ubicaciones.delete(item)
+                self.ubicaciones_combo = {}
+                for row in rows:
+                    self.tree_ubicaciones.insert("", "end", values=row)
+                    etiqueta = f"{row[1]} — {row[3]} (#{row[0]})"
+                    self.ubicaciones_combo[etiqueta] = row[0]
+            except Exception as e:
+                print(f"Error cargando ubicaciones: {e}")
+
+
     # -------------------- EVENTOS --------------------
 
     def configurar_pestana_eventos(self):
@@ -609,7 +742,8 @@ class AppAgenda(ctk.CTk):
         self.cargar_datos_usuarios()
         self.cargar_datos_categorias()
         self.cargar_datos_eventos()
-
+        self.cargar_datos_ubicaciones() #Agregado por Jimena por el RF-08
+        
 
 if __name__ == "__main__":
     app = AppAgenda()
