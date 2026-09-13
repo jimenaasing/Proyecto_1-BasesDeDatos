@@ -105,6 +105,7 @@ BEFORE INSERT OR UPDATE ON categorias
 FOR EACH ROW EXECUTE FUNCTION evitar_ciclo_categorias();
 
 SET search_path TO prototipo, public;
+
 --Nuevas tablas creadas por Jimena!!!!!!!!!!!!!!!!!!!!
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE TABLE ubicaciones (

@@ -28,7 +28,7 @@ class AppAgenda(ctk.CTk):
             "user": "postgres",
             "password": "postgres",
             "host": "localhost",
-            "port": "5437",
+            "port": "5432",
         }
 
         self.usuarios_combo = {}
@@ -225,6 +225,9 @@ class AppAgenda(ctk.CTk):
         ctk.CTkButton(form, text="💾 Actualizar seleccionado", command=self.actualizar_usuario).pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(form, text="🧹 Nuevo / Limpiar", command=self.limpiar_form_usuario, fg_color="gray").pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(form, text="🗑️ Eliminar seleccionado", command=self.eliminar_usuario, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+
+        #NUEVO - AGREGADO POR EL MODULO DE GESTION DE UBICACIONES (RF-09) - JIMENA ARAYA SING 
+
 
     def usuario_seleccionado_id(self):
         sel = self.tree_usuarios.selection()
@@ -611,3 +614,7 @@ class AppAgenda(ctk.CTk):
 if __name__ == "__main__":
     app = AppAgenda()
     app.mainloop()
+
+#Nuevo Modulo de Gestie Ubicaciones - Realizado por Jimena Araya Sing
+# Tarea: Histórico de eventos por ubicación (RF-09 GUI) 
+
