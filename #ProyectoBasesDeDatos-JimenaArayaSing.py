@@ -37,6 +37,7 @@ class AppAgenda(ctk.CTk):
         self.ubicaciones_combo = {} #Agregado por Jimena por el RF-08
         self.disponibilidades_combo = {} #Agregado por Jimena por el RF-11 y RF-12
         self.tipos_disponibilidad_combo = {} #Agregado por Jimena por el RF-11 y RF-12
+        self.eventos_combo = {} #Agregado por Jimena por el modulo Tareas Asociadas a Eventos 
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -134,8 +135,9 @@ class AppAgenda(ctk.CTk):
             ("Usuarios", "👥"),
             ("Categorías", "📁"),
             ("Eventos", "🗓️"),
-            ("Ubicaciones", ""), #Agregado por Jimena por el RF-08
-            ("Disponibilidad", ""), #Agregado por Jimena por el RF-11 y RF-12
+            ("Ubicaciones", "🏢"), #Agregado por Jimena por el RF-08
+            ("Disponibilidad", "🕛"), #Agregado por Jimena por el RF-11 y RF-12
+            ("Tareas", "✍️"), #Agregado por Jimena por el modulo tareas Asociadas a Eventos 
         ], start=2):
             btn = ctk.CTkButton(
                 self.sidebar_frame, text=f"{icono}  {nombre}",
@@ -149,7 +151,7 @@ class AppAgenda(ctk.CTk):
             self.sidebar_frame,
             text="🔄  Recargar datos",
             command=self.actualizar_todas_las_tablas
-        ).grid(row=7, column=0, padx=15, pady=(20, 5), sticky="ew")
+        ).grid(row=8, column=0, padx=15, pady=(20, 5), sticky="ew")
 
         ctk.CTkLabel(self.sidebar_frame, text="APARIENCIA", font=ctk.CTkFont(size=11, weight="bold")).grid(
             row=11, column=0, padx=20, pady=(10, 5), sticky="w"
@@ -176,6 +178,7 @@ class AppAgenda(ctk.CTk):
         self.tab_eventos = self.tabview.add("Eventos")
         self.tab_ubicaciones = self.tabview.add("Ubicaciones") #Agregado por Jimena por el RF-08
         self.tab_disponibilidad = self.tabview.add("Disponibilidad") #Agregado por Jimena por el RF-11 y RF-12
+        self.tab_tareas = self.tabview.add("Tareas") #Agregado por Jimena por el modulo de Tareas Asociadas a Eventos 
 
         self.configurar_pestana_usuarios()
         self.configurar_pestana_categorias()
@@ -183,6 +186,7 @@ class AppAgenda(ctk.CTk):
         self.configurar_pestana_ubicaciones()  #Agregado por Jimena por el RF-08
         self.configurar_pestana_disponibilidad() #Agregado por Jimena por el RF-11 y RF-12
         self.seleccionar_modulo("Usuarios")
+        self.configurar_pestana_tareas() #Agregado por Jimena por el modulo de Tareas Asociadas a Eventos 
 
     def al_cambiar_pestana(self):
         nombre = self.tabview.get()
@@ -431,7 +435,7 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             print(f"Error cargando categorías: {e}")
 
- # -------------------- UBICACIONES (Agregado originalmente por Jimena por el RF-08) --------------------
+ # -------------------- UBICACIONES (Agregado originalmente por Jimena por el RF-08) 
     def configurar_pestana_ubicaciones (self):
         self.crear_encabezado(self.tab_ubicaciones,"Ubicaciones", "Administra los recintos físicos donde se realizan los eventos.")
         subtabs = ctk.CTkTabview(self.tab_ubicaciones)
@@ -1103,6 +1107,281 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error al buscar", str(e))
 
+#Agregado por Jimena para modulo Tareas Asociadas a Eventos 
+    def configurar_pestana_tareas (self): 
+        self.crear_encabezado(self.tab_tareas, "Tareas", "Da seguimiento a las tareas asociadas a cada evento.")
+
+        subtabs= ctk.CTkTabview(self.tab_tareas)
+        subtabs.pack(fill="both", expand=True, padx=10, pady=5)
+
+        tab_gestion = subtabs.add("Gestión")
+        tab_metricas = subtabs.add("Métricas")
+        tab_seguimiento = subtabs.add("Seguimiento")
+
+        self.configurar_subpestana_metricas(tab_metricas)        # Agregado por Jimena para RF-17
+        self.configurar_subpestana_seguimiento(tab_seguimiento)  #Agregado por Jimena para RF-16
+
+        cuerpo = ctk.CTkFrame(tab_gestion, fg_color="transparent")
+        cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
+        cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1)
+        cuerpo.grid_rowconfigure(0, weight=1)
+
+        tabla = ctk.CTkFrame(cuerpo); tabla.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        form = ctk.CTkScrollableFrame(cuerpo, width=330); form.grid(row=0, column=1, sticky="nsew")
+
+        self.tree_tareas = self.crear_treeview(
+            tabla, ("ID", "Título", "Evento", "Responsable", "Prioridad", "Fecha límite", "Estado"),
+             (50, 150, 150, 150, 90, 100, 100))
+        
+        self.tree_tareas.bind("<<TreeviewSelect>>", self.cargar_tarea_seleccionada)
+
+        ctk.CTkLabel(form, text="Formulario de tarea", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 15))
+        
+        self.entry_tarea_titulo = ctk.CTkEntry(form, placeholder_text="Título de la tarea")
+        self.entry_tarea_titulo.pack(fill="x", padx=10, pady=6)
+
+
+        self.entry_tarea_descripcion = ctk.CTkEntry(form, placeholder_text="Descripción")
+        self.entry_tarea_descripcion.pack(fill="x", padx=10, pady=6)
+
+        ctk.CTkLabel(form, text="Evento").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tarea_evento = ctk.CTkComboBox(form, values=["Seleccione un evento"], state="readonly")
+        self.combo_tarea_evento.set("Seleccione un evento")
+        self.combo_tarea_evento.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Usuario responsable").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tarea_usuario = ctk.CTkComboBox(form, values=["Seleccione un usuario"], state="readonly")
+        self.combo_tarea_usuario.set("Seleccione un usuario")
+        self.combo_tarea_usuario.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Prioridad").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tarea_prioridad = ctk.CTkComboBox(form, values=["baja", "media", "alta"], state="readonly")
+        self.combo_tarea_prioridad.set("media")
+        self.combo_tarea_prioridad.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Fecha límite").pack(anchor="w", padx=10, pady=(8, 2))
+        self.fecha_tarea_limite = self.crear_selector_fecha(form)
+        self.fecha_tarea_limite.pack(fill="x", padx=10, pady=4)
+
+
+        ctk.CTkLabel(form, text="Estado").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tarea_estado = ctk.CTkComboBox(
+            form, values=["pendiente", "en_progreso", "completada", "cancelada"], state="readonly"
+        )
+        self.combo_tarea_estado.set("pendiente")
+        self.combo_tarea_estado.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkButton(form, text="Registrar tarea", command=self.agregar_tarea).pack(fill="x", padx=10, pady=(15, 5))
+        ctk.CTkButton(form, text="Actualizar seleccionada", command=self.actualizar_tarea).pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="Nueva / Limpiar", command=self.limpiar_form_tarea, fg_color="gray").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="Eliminar seleccionada", command=self.eliminar_tarea,
+                      fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+
+
+#Métodos CRUD
+    def tarea_seleccionada_id(self):
+        sel = self.tree_tareas.selection()
+        return self.tree_tareas.item(sel[0])["values"][0] if sel else None
+
+    def cargar_tarea_seleccionada (self, _=None):
+        sel = self.tree_tareas.selection()
+        if not sel: return
+        vals = self.tree_tareas.item(sel[0])["values"]
+        self.entry_tarea_titulo.delete(0, tk.END); self.entry_tarea_titulo.insert(0, vals[1])
+        self.combo_tarea_evento.set(vals[2])
+        self.combo_tarea_usuario.set(vals[3])
+        self.combo_tarea_prioridad.set(vals[4])
+        self.establecer_fecha(self.fecha_tarea_limite, str(vals[5]))
+        self.combo_tarea_estado.set(vals[6])
+
+    def limpiar_form_tarea(self):
+        self.tree_tareas.selection_remove(self.tree_tareas.selection())
+        self.entry_tarea_titulo.delete(0, tk.END)
+        self.entry_tarea_descripcion.delete(0, tk.END)
+        self.combo_tarea_evento.set("Seleccione un evento")
+        self.combo_tarea_usuario.set("Seleccione un usuario")
+        self.combo_tarea_prioridad.set("media")
+        self.establecer_fecha(self.fecha_tarea_limite, datetime.now())
+        self.combo_tarea_estado.set("pendiente")
+
+    def _datos_tarea_formulario(self):
+        titulo = self.entry_tarea_titulo.get().strip()
+        descripcion = self.entry_tarea_descripcion.get().strip()
+        evento = self.eventos_combo.get(self.combo_tarea_evento.get())
+        usuario = self.usuarios_combo.get(self.combo_tarea_usuario.get())
+        prioridad = self.combo_tarea_prioridad.get()
+        fecha_limite = self.obtener_fecha(self.fecha_tarea_limite)
+        estado = self.combo_tarea_estado.get()
+        if not titulo or evento is None or usuario is None:
+            raise ValueError("Completa título, evento y usuario responsable.")
+        return titulo, descripcion, prioridad, fecha_limite, estado, usuario, evento
+
+    def agregar_tarea(self):
+        try:
+            datos = self._datos_tarea_formulario()
+            self.ejecutar_consulta("""
+                INSERT INTO tareas (titulo, descripcion, prioridad, fecha_limite, estados, id_usuario, id_evento)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, datos)
+            self.limpiar_form_tarea(); self.cargar_datos_tareas()
+            messagebox.showinfo("Éxito", "Tarea registrada correctamente.")
+        except ValueError as e:
+            messagebox.showwarning("Datos inválidos", str(e))
+        except Exception as e:
+            messagebox.showerror("Error de base de datos", str(e))
+
+    def actualizar_tarea(self):
+        tid = self.tarea_seleccionada_id()
+        if tid is None:
+            return messagebox.showwarning("Selección requerida", "Selecciona una tarea.")
+        try:
+            titulo, descripcion, prioridad, fecha_limite, estado, usuario, evento = self._datos_tarea_formulario()
+            self.ejecutar_consulta("""
+                UPDATE tareas SET titulo=%s, descripcion=%s, prioridad=%s, fecha_limite=%s,
+                estados=%s, id_usuario=%s, id_evento=%s WHERE id_tarea=%s
+            """, (titulo, descripcion, prioridad, fecha_limite, estado, usuario, evento, tid))
+            self.cargar_datos_tareas()
+            messagebox.showinfo("Éxito", "Tarea actualizada.")
+        except ValueError as e:
+            messagebox.showwarning("Datos inválidos", str(e))
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def eliminar_tarea(self):
+            tid = self.tarea_seleccionada_id()
+            if tid is None:
+                return messagebox.showwarning("Selección requerida", "Selecciona una tarea.")
+            if not messagebox.askyesno("Confirmar", "¿Eliminar la tarea seleccionada?"):
+                return
+            try:
+                self.ejecutar_consulta("DELETE FROM tareas WHERE id_tarea=%s", (tid,))
+                self.limpiar_form_tarea(); self.cargar_datos_tareas()
+                messagebox.showinfo("Eliminado", "Tarea eliminada.")
+            except Exception as e:
+                messagebox.showerror("No se pudo eliminar", str(e))
+
+
+    def cargar_datos_tareas(self):
+            try:
+                rows = self.ejecutar_consulta("""
+                    SELECT t.id_tarea, t.titulo, e.titulo, u.nombre || ' ' || u.apellido,
+                        t.prioridad, t.fecha_limite, t.estados
+                    FROM tareas t
+                    JOIN eventos e ON e.id_evento = t.id_evento
+                    JOIN usuarios u ON u.id_usuario = t.id_usuario
+                    ORDER BY t.fecha_limite
+                """, fetch=True)
+                for item in self.tree_tareas.get_children():
+                    self.tree_tareas.delete(item)
+                for row in rows:
+                    self.tree_tareas.insert("", "end", values=row)
+
+                eventos = self.ejecutar_consulta("SELECT id_evento, titulo FROM eventos ORDER BY titulo", fetch=True)
+                self.eventos_combo = {titulo: eid for eid, titulo in eventos}
+                self.combo_tarea_evento.configure(values=["Seleccione un evento"] + list(self.eventos_combo.keys()))
+
+                valores_u = ["Seleccione un usuario"] + list(self.usuarios_combo.keys())
+                self.combo_tarea_usuario.configure(values=valores_u)
+            except Exception as e:
+                            print(f"Error cargando tareas: {e}")
+
+#Agregado por Jimena para RF-17 (Reporte de carga de trabajo y tareas pendientes por usuario)
+
+    def configurar_subpestana_metricas(self, tab_metricas):
+            self.crear_encabezado(
+                tab_metricas, "Carga de trabajo por usuario",
+                "Volumen de tareas activas (pendiente / en progreso) y tareas vencidas por cada responsable."
+            )
+
+            contenedor = ctk.CTkFrame(tab_metricas, fg_color="transparent")
+            contenedor.pack(fill="both", expand=True, padx=10, pady=5)
+
+            ctk.CTkButton(
+                contenedor, text="🔄 Actualizar métricas", command=self.cargar_metricas_tareas
+            ).pack(anchor="w", padx=5, pady=(0, 10))
+
+            self.tree_metricas_tareas = self.crear_treeview(
+            contenedor,
+            ("Usuario", "Tareas activas", "Tareas vencidas", "Total asignadas"),
+            (260, 130, 130, 130)
+        )
+
+    def cargar_metricas_tareas(self):
+            try:
+                rows = self.ejecutar_consulta("""
+                    SELECT u.nombre || ' ' || u.apellido AS usuario,
+                        COUNT(*) FILTER (
+                            WHERE t.estados IN ('pendiente', 'en_progreso')
+                        ) AS tareas_activas,
+                        COUNT(*) FILTER (
+                            WHERE t.estados IN ('pendiente', 'en_progreso')
+                            AND t.fecha_limite < CURRENT_DATE
+                        ) AS tareas_vencidas,
+                        COUNT(t.id_tarea) AS total_asignadas
+                    FROM usuarios u
+                    LEFT JOIN tareas t ON t.id_usuario = u.id_usuario
+                    GROUP BY u.id_usuario, u.nombre, u.apellido
+                    ORDER BY tareas_vencidas DESC, tareas_activas DESC, usuario
+                """, fetch=True)
+
+                for item in self.tree_metricas_tareas.get_children():
+                    self.tree_metricas_tareas.delete(item)
+                for row in rows:
+                    self.tree_metricas_tareas.insert("", "end", values=row)
+            except Exception as e:
+                print(f"Error cargando métricas de tareas: {e}")
+
+#Agregado por Jimena para RF-16 (Carga de trabajo y vencimiento, eventos con tareas vencidas)
+
+    def configurar_subpestana_seguimiento(self, tab_seguimiento):
+            self.crear_encabezado(
+                tab_seguimiento, "Eventos con tareas vencidas",
+                "Eventos que arrastran tareas fuera de su fecha límite (pendientes o en progreso y ya vencidas)."
+            )
+
+            contenedor = ctk.CTkFrame(tab_seguimiento, fg_color="transparent")
+            contenedor.pack(fill="both", expand=True, padx=10, pady=5)
+
+            ctk.CTkButton(
+                contenedor, text="🔄 Actualizar seguimiento", command=self.cargar_eventos_con_tareas_vencidas
+            ).pack(anchor="w", padx=5, pady=(0, 10))
+
+            self.tree_eventos_vencidos = self.crear_treeview(
+                contenedor,
+                ("Evento", "Fin del evento", "Tareas vencidas", "Responsables"),
+                (220, 150, 120, 260)
+        )
+
+    def cargar_eventos_con_tareas_vencidas(self):
+            try:
+                rows = self.ejecutar_consulta("""
+                    SELECT e.titulo AS evento,
+                        e.fecha_fin,
+                        COUNT(t.id_tarea) AS tareas_vencidas,
+                        STRING_AGG(DISTINCT u.nombre || ' ' || u.apellido, ', ') AS responsables
+                    FROM tareas t
+                    JOIN eventos e ON e.id_evento = t.id_evento
+                    JOIN usuarios u ON u.id_usuario = t.id_usuario
+                    WHERE t.estados IN ('pendiente', 'en_progreso')
+                    AND t.fecha_limite < CURRENT_DATE
+                    GROUP BY e.id_evento, e.titulo, e.fecha_fin
+                    ORDER BY tareas_vencidas DESC, e.fecha_fin ASC
+                """, fetch=True)
+
+                for item in self.tree_eventos_vencidos.get_children():
+                    self.tree_eventos_vencidos.delete(item)
+                if not rows:
+                    return
+                for row in rows:
+                    titulo, fecha_fin, vencidas, responsables = row
+                    fecha_fin = fecha_fin.strftime("%Y-%m-%d %H:%M") if hasattr(fecha_fin, "strftime") else fecha_fin
+                    self.tree_eventos_vencidos.insert("", "end", values=(titulo, fecha_fin, vencidas, responsables))
+            except Exception as e:
+                print(f"Error cargando eventos con tareas vencidas: {e}")
+
+
+
+
 
     # -------------------- REFRESCO GENERAL --------------------
 
@@ -1111,7 +1390,10 @@ class AppAgenda(ctk.CTk):
         self.cargar_datos_categorias()
         self.cargar_datos_ubicaciones() #Agregado por Jimena por el RF-08 (se pone primero porq sino no carga)
         self.cargar_datos_disponibilidades() #Agregado por Jimena por el RF-11 y RF-12
+        self.cargar_datos_tareas()
         self.cargar_datos_eventos()
+        self.cargar_metricas_tareas()             #Agregado por Jimena por el RF-17
+        self.cargar_eventos_con_tareas_vencidas()  #Agregado por Jimena por el RF-16
     
         
 
