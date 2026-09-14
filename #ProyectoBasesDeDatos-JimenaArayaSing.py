@@ -132,7 +132,7 @@ class AppAgenda(ctk.CTk):
             ("Usuarios", "👥"),
             ("Categorías", "📁"),
             ("Eventos", "🗓️"),
-            ("Ubicaciones", "-"), #Agregado por Jimena por el RF-08
+            ("Ubicaciones", ""), #Agregado por Jimena por el RF-08
         ], start=2):
             btn = ctk.CTkButton(
                 self.sidebar_frame, text=f"{icono}  {nombre}",
@@ -426,7 +426,7 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             print(f"Error cargando categorías: {e}")
 
- # -------------------- UBICACIONES (#Agregado por Jimena por el RF-08) --------------------
+ # -------------------- UBICACIONES (Agregado por Jimena por el RF-08) --------------------
     def configurar_pestana_ubicaciones (self):
         self.crear_encabezado(self.tab_ubicaciones,"Ubicaciones", "Administra los recintos físicos donde se realizan los eventos.")
         cuerpo = ctk.CTkFrame(self.tab_ubicaciones, fg_color="transparent")
@@ -456,8 +456,35 @@ class AppAgenda(ctk.CTk):
         ctk.CTkButton(form, text="Registrar ubicación", command=self.agregar_ubicacion).pack(fill="x", padx=10, pady=(15, 5))
         ctk.CTkButton(form, text="Actualizar seleccionada", command=self.actualizar_ubicacion).pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(form, text="Nueva / Limpiar", command=self.limpiar_form_ubicacion, fg_color="gray").pack(fill="x", padx=10, pady=5)
-        ctk.CTkButton(form, text="Eliminar seleccionada", command=self.eliminar_ubicacion,
+        ctk.CTkButton(form, text="Eliminar ubicacion seleccionada", command=self.eliminar_ubicacion,
                   fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+
+        #Agregado por Jimena por el RF-09 (este es el panel de histórico por ubicación)
+        historial_frame = ctk.CTkFrame(self.tab_ubicaciones)
+        historial_frame.pack(fill="both", expand=True, padx=10, pady=(5, 10))
+
+        ctk.CTkLabel(historial_frame, text="Histórico de eventos por ubicación",
+                    font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w", padx=10, pady=(10, 5))
+
+        fila_selector = ctk.CTkFrame(historial_frame, fg_color="transparent")
+        fila_selector.pack(fill="x", padx=10, pady=(0, 8))
+
+        self.combo_historial_ubicacion = ctk.CTkComboBox(
+            fila_selector, values=["Seleccione una ubicación"], state="readonly", width=280
+        )
+        self.combo_historial_ubicacion.set("Seleccione una ubicación")
+        self.combo_historial_ubicacion.pack(side="left", padx=(0, 10))
+
+        ctk.CTkButton(fila_selector, text="Consultar el histórico",
+                    command=self.cargar_historico_ubicacion).pack(side="left")
+
+        self.tree_historial_ubicacion = self.crear_treeview(
+            historial_frame,
+            ("ID", "Título", "Categoría", "Propietario", "Inicio", "Fin"),
+            (60, 180, 140, 160, 140, 140)
+        )
+
+
         
     def ubicacion_seleccionada_id(self):
         sel = self.tree_ubicaciones.selection()
@@ -553,8 +580,46 @@ class AppAgenda(ctk.CTk):
                     self.tree_ubicaciones.insert("", "end", values=row)
                     etiqueta = f"{row[1]} — {row[3]} (#{row[0]})"
                     self.ubicaciones_combo[etiqueta] = row[0]
+
+                valores_hist = ["Seleccione una ubicación"] + list(self.ubicaciones_combo.keys())  #Agregado por Jimena por el RF-09 (corregido)
+                self.combo_historial_ubicacion.configure(values=valores_hist)
+
             except Exception as e:
                 print(f"Error cargando ubicaciones: {e}")
+
+
+
+#Agregado por Jimena por el RF-09 (esto lo que hace es carga el historial de eventos de una ubicación específica y los muestra en una tabla )
+    def cargar_historico_ubicacion(self):
+        etiqueta = self.combo_historial_ubicacion.get()
+        id_ubicacion = self.ubicaciones_combo.get(etiqueta)
+        if id_ubicacion is None:
+            return messagebox.showwarning("Es requerido seleccionar", "Selecciona una ubicación primero.")
+        try:                                        #esto ordena cronológicamente los eventos programados para una ubicación 
+            rows = self.ejecutar_consulta("""
+                SELECT e.id_evento, e.titulo, c.nombre, 
+                    u.nombre || ' ' || u.apellido, 
+                    e.fecha_inicio, e.fecha_fin
+                FROM eventos e
+                JOIN categorias c ON c.id_categoria = e.id_categoria
+                JOIN usuarios u ON u.id_usuario = e.id_usuario_propietario
+                WHERE e.id_ubicacion = %s
+                ORDER BY e.fecha_inicio DESC
+            """, (id_ubicacion,), fetch=True)
+
+            for item in self.tree_historial_ubicacion.get_children():
+                    self.tree_historial_ubicacion.delete(item)
+
+            if not rows:
+                    messagebox.showinfo("Sin resultados", "Esta ubicación no tiene eventos registrados.")
+                    return
+            for row in rows:
+                inicio = row[4].strftime("%Y-%m-%d %H:%M") if hasattr(row[4], "strftime") else row[4]
+                fin = row[5].strftime("%Y-%m-%d %H:%M") if hasattr(row[5], "strftime") else row[5]
+                self.tree_historial_ubicacion.insert("", "end", values=(row[0], row[1], row[2], row[3], inicio, fin))
+        except Exception as e:
+            messagebox.showerror("Error al consultar", str(e))
+        
 
 
     # -------------------- EVENTOS --------------------
@@ -570,7 +635,7 @@ class AppAgenda(ctk.CTk):
         form = ctk.CTkScrollableFrame(cuerpo, width=350); form.grid(row=0, column=1, sticky="nsew")
 
         self.tree_eventos = self.crear_treeview(
-            tabla, ("ID", "Propietario", "Categoría", "Título", "Inicio", "Fin"),
+            tabla, ("ID", "Propietario", "Categoría","Ubicación", "Título", "Inicio", "Fin"), #Agregado por Jimena por el RF-09 (lo que agregue fue ubicacion)
             (70, 170, 150, 220, 150, 150)
         )
         self.tree_eventos.bind("<<TreeviewSelect>>", self.cargar_evento_seleccionado)
@@ -589,6 +654,13 @@ class AppAgenda(ctk.CTk):
         self.combo_ev_categoria = ctk.CTkComboBox(form, values=["Seleccione una categoría"], state="readonly")
         self.combo_ev_categoria.set("Seleccione una categoría")
         self.combo_ev_categoria.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Ubicación").pack(anchor="w", padx=10, pady=(8, 2)) #Agregado por Jimena por el RF-09
+        self.combo_ev_ubicacion = ctk.CTkComboBox(form, values=["Seleccione una ubicación"], state="readonly")
+        self.combo_ev_ubicacion.set("Seleccione una ubicación")
+        self.combo_ev_ubicacion.pack(fill="x", padx=10, pady=4)
+
+
 
         ctk.CTkLabel(form, text="Inicio").pack(anchor="w", padx=10, pady=(10, 2))
         fila_inicio = ctk.CTkFrame(form, fg_color="transparent"); fila_inicio.pack(fill="x", padx=10)
@@ -639,6 +711,7 @@ class AppAgenda(ctk.CTk):
         self.entry_ev_titulo.delete(0, tk.END); self.entry_ev_titulo.insert(0, vals[3])
         self.combo_ev_usuario.set(vals[1])
         self.combo_ev_categoria.set(vals[2])
+        self.combo_ev_ubicacion.set(vals[3] if len(vals) > 6 and vals[3] else "Seleccione una ubicación")  #Agregado por Jimena por el RF-09
         try:
             ini = datetime.strptime(str(vals[4]), "%Y-%m-%d %H:%M")
             fin = datetime.strptime(str(vals[5]), "%Y-%m-%d %H:%M")
@@ -658,11 +731,13 @@ class AppAgenda(ctk.CTk):
         self.establecer_fecha(self.fecha_inicio, hoy); self.establecer_fecha(self.fecha_fin, hoy)
         self.hora_inicio.delete(0, tk.END); self.hora_inicio.insert(0, "09:00")
         self.hora_fin.delete(0, tk.END); self.hora_fin.insert(0, "10:00")
+        self.combo_ev_ubicacion.set("Seleccione una ubicación")  #Agregado por Jimena por el RF-09
 
     def datos_evento_formulario(self):
         titulo = self.entry_ev_titulo.get().strip()
         usuario = self.usuarios_combo.get(self.combo_ev_usuario.get())
         categoria = self.categorias_combo.get(self.combo_ev_categoria.get())
+        ubicacion = self.ubicaciones_combo.get(self.combo_ev_ubicacion.get()) #Agregado por Jimena por el RF-09
         try:
             inicio = datetime.strptime(f"{self.obtener_fecha(self.fecha_inicio)} {self.hora_inicio.get().strip()}", "%Y-%m-%d %H:%M")
             fin = datetime.strptime(f"{self.obtener_fecha(self.fecha_fin)} {self.hora_fin.get().strip()}", "%Y-%m-%d %H:%M")
@@ -672,16 +747,17 @@ class AppAgenda(ctk.CTk):
             raise ValueError("Completa título, propietario y categoría.")
         if fin <= inicio:
             raise ValueError("La fecha y hora de finalización deben ser posteriores al inicio.")
-        return usuario, categoria, titulo, inicio, fin
+        return usuario, categoria, ubicacion, titulo, inicio, fin
 
     def agregar_evento(self):
         try:
+            usuario, categoria, ubicacion, titulo, inicio, fin = self.datos_evento_formulario() #Agregado por Jimena por el RF-09 (lo que hace esta funcion es que obtiene los datos de un formulario de eventos y los devuelve agrupados (generalmente en una tupla o lista). )
             datos = self.datos_evento_formulario()
             self.ejecutar_consulta("""
                 INSERT INTO eventos
-                (id_usuario_propietario, id_categoria, titulo, fecha_inicio, fecha_fin)
+                (id_usuario_propietario, id_categoria, id_ubicacion, titulo, fecha_inicio, fecha_fin) 
                 VALUES (%s, %s, %s, %s, %s)
-            """, datos)
+            """, (usuario, categoria, ubicacion, titulo, inicio, fin) ) #Agregado por Jimena por el RF-09
             self.limpiar_form_evento(); self.cargar_datos_eventos()
             messagebox.showinfo("Éxito", "Evento creado correctamente.")
         except Exception as e:
@@ -691,12 +767,14 @@ class AppAgenda(ctk.CTk):
         eid = self.evento_seleccionado_id()
         if eid is None: return messagebox.showwarning("Selección requerida", "Selecciona un evento.")
         try:
-            usuario, categoria, titulo, inicio, fin = self.datos_evento_formulario()
+            usuario, categoria, ubicacion, titulo, inicio, fin = self.datos_evento_formulario()
             self.ejecutar_consulta("""
-                UPDATE eventos SET id_usuario_propietario=%s, id_categoria=%s,
+                UPDATE eventos SET id_usuario_propietario=%s, id_categoria=%s, id_ubicacion=%s 
                 titulo=%s, fecha_inicio=%s, fecha_fin=%s WHERE id_evento=%s
-            """, (usuario, categoria, titulo, inicio, fin, eid))
+            """, (usuario, categoria, ubicacion, titulo, inicio, fin, eid))
             self.cargar_datos_eventos(); messagebox.showinfo("Éxito", "Evento actualizado.")
+        except psycopg2.errors.ExclusionViolation:
+                messagebox.showerror("Conflicto de horario", "Ya existe un evento programado en esa ubicación durante ese horario.") #Agregado por Jimena por el RF-09
         except Exception as e:
             messagebox.showerror("No se pudo actualizar", str(e))
 
@@ -715,24 +793,28 @@ class AppAgenda(ctk.CTk):
         try:
             rows = self.ejecutar_consulta("""
                 SELECT e.id_evento, u.id_usuario, u.nombre, u.apellido,
-                       c.id_categoria, c.nombre, e.titulo, e.fecha_inicio, e.fecha_fin
+                       c.id_categoria, c.nombre, ub.id_ubicacion, ub.nombre, ub.ciudad, e.titulo, e.fecha_inicio, e.fecha_fin
                 FROM eventos e
                 JOIN usuarios u ON u.id_usuario = e.id_usuario_propietario
                 JOIN categorias c ON c.id_categoria = e.id_categoria
+                LEFT JOIN ubicaciones ub ON ub.id_ubicacion = e.id_ubicacion
                 ORDER BY e.fecha_inicio DESC
             """, fetch=True)
             for item in self.tree_eventos.get_children(): self.tree_eventos.delete(item)
             for row in rows:
                 usuario = f"{row[2]} {row[3]} — #{row[1]}"
                 categoria = f"{row[5]} — #{row[4]}"
-                inicio = row[7].strftime("%Y-%m-%d %H:%M") if hasattr(row[7], "strftime") else row[7]
-                fin = row[8].strftime("%Y-%m-%d %H:%M") if hasattr(row[8], "strftime") else row[8]
-                self.tree_eventos.insert("", "end", values=(row[0], usuario, categoria, row[6], inicio, fin))
+                ubicacion = f"{row[7]} — {row[8]} (#{row[6]})" if row[6] is not None else ""#Agregado por Jimena por el RF-09 y el resto de indices row se ajustaron porq ahora hay tres columnas (ub.id_ubicacion, ub.nombre, ub.ciudad)
+                inicio = row[10].strftime("%Y-%m-%d %H:%M") if hasattr(row[10], "strftime") else row[10]
+                fin = row[11].strftime("%Y-%m-%d %H:%M") if hasattr(row[11], "strftime") else row[11]
+                self.tree_eventos.insert("", "end", values=(row[0], usuario, categoria, row[9], inicio, fin))
 
             valores_u = ["Seleccione un usuario"] + list(self.usuarios_combo.keys())
             valores_c = ["Seleccione una categoría"] + list(self.categorias_combo.keys())
+            valores_ub = ["Seleccione una ubicación"] + list(self.ubicaciones_combo.keys()) #Agregado por Jimena por el RF-09
             self.combo_ev_usuario.configure(values=valores_u)
             self.combo_ev_categoria.configure(values=valores_c)
+            self.combo_ev_ubicacion.configure(values=valores_ub) #Agregado por Jimena por el RF-09
         except Exception as e:
             print(f"Error cargando eventos: {e}")
 
@@ -741,8 +823,9 @@ class AppAgenda(ctk.CTk):
     def actualizar_todas_las_tablas(self):
         self.cargar_datos_usuarios()
         self.cargar_datos_categorias()
+        self.cargar_datos_ubicaciones() #Agregado por Jimena por el RF-08 (se pone primero porq sino no carga)
         self.cargar_datos_eventos()
-        self.cargar_datos_ubicaciones() #Agregado por Jimena por el RF-08
+    
         
 
 if __name__ == "__main__":
