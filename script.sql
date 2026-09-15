@@ -151,10 +151,18 @@ id_ubicacion WITH =,
 tsrange(fecha_inicio, fecha_fin) WITH &&
     );
 
+-- Vista para RF-10: ranking de ocupación de ubicacion
+CREATE VIEW vista_ranking_ubicaciones AS
+SELECT ub.id_ubicacion, ub.nombre, ub.ciudad, 
+       COUNT(e.id_evento) AS total_eventos
+FROM ubicaciones ub
+LEFT JOIN eventos e ON e.id_ubicacion = ub.id_ubicacion
+GROUP BY ub.id_ubicacion, ub.nombre, ub.ciudad
+ORDER BY total_eventos DESC;
+
 ALTER TABLE disponibilidades
 ADD CONSTRAINT no_disponibilidades_simultaneas
 EXCLUDE USING gist (
 id_usuario WITH =,
 tsrange(fecha + hora_inicio, fecha + hora_fin) WITH &&
 );
-
