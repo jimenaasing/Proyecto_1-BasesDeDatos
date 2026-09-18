@@ -106,7 +106,7 @@ FOR EACH ROW EXECUTE FUNCTION evitar_ciclo_categorias();
 
 SET search_path TO prototipo, public;
 
---Nuevas tablas creadas por Jimena!!!!!!!!!!!!!!!!!!!!
+--Nuevas tablas creadas por Jimena!!!!!!!!!!!!!!!
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE TABLE ubicaciones (
 id_ubicacion  SERIAL PRIMARY KEY,
@@ -133,7 +133,7 @@ CONSTRAINT check_horas CHECK (hora_fin > hora_inicio)
 CREATE TABLE tareas (
 id_tarea SERIAL PRIMARY KEY,
 titulo VARCHAR(50) NOT NULL,
-descripción VARCHAR(100),
+descripcion VARCHAR(100), 
 prioridad VARCHAR(10) NOT NULL CHECK (prioridad IN ('baja', 'media', 'alta')),
 fecha_limite DATE NOT NULL,
 estados VARCHAR(15) NOT NULL DEFAULT 'pendiente' CHECK (estados IN ('pendiente', 'en progreso', 'completada', 'cancelada')),
@@ -166,3 +166,11 @@ EXCLUDE USING gist (
 id_usuario WITH =,
 tsrange(fecha + hora_inicio, fecha + hora_fin) WITH &&
 );
+
+
+INSERT INTO tipos_disponibilidad (nombre) VALUES 
+('disponible'), 
+('ocupado'), 
+('no disponible');
+ALTER TABLE tareas RENAME COLUMN id_eventos TO id_evento;
+ALTER TABLE tareas RENAME COLUMN id_eventos TO id_evento;
