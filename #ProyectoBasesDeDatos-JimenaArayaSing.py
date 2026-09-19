@@ -864,6 +864,10 @@ class AppAgenda(ctk.CTk):
             self.combo_ev_usuario.configure(values=valores_u)
             self.combo_ev_categoria.configure(values=valores_c)
             self.combo_ev_ubicacion.configure(values=valores_ub) #Agregado por Jimena por el RF-09
+            if hasattr(self, "combo_tarea_evento"):
+                self.combo_tarea_evento.configure(values=["Seleccione un evento"] + list(self.eventos_combo.keys()))
+                if self.combo_tarea_evento.get() not in ["Seleccione un evento"] + list(self.eventos_combo.keys()):
+                    self.combo_tarea_evento.set("Seleccione un evento")
         except Exception as e:
             print(f"Error cargando eventos: {e}")
 
@@ -1279,6 +1283,10 @@ class AppAgenda(ctk.CTk):
                 eventos = self.ejecutar_consulta("SELECT id_evento, titulo FROM eventos ORDER BY titulo", fetch=True)
                 self.eventos_combo = {titulo: eid for eid, titulo in eventos}
                 self.combo_tarea_evento.configure(values=["Seleccione un evento"] + list(self.eventos_combo.keys()))
+                if hasattr(self, "combo_tarea_evento"):
+                    self.combo_tarea_evento.configure(values=["Seleccione un evento"] + list(self.eventos_combo.keys()))
+                    if self.combo_tarea_evento.get() not in ["Seleccione un evento"] + list(self.eventos_combo.keys()):
+                        self.combo_tarea_evento.set("Seleccione un evento") 
 
                 valores_u = ["Seleccione un usuario"] + list(self.usuarios_combo.keys())
                 self.combo_tarea_usuario.configure(values=valores_u)
@@ -1389,9 +1397,9 @@ class AppAgenda(ctk.CTk):
         self.cargar_datos_usuarios()
         self.cargar_datos_categorias()
         self.cargar_datos_ubicaciones() #Agregado por Jimena por el RF-08 (se pone primero porq sino no carga)
-        self.cargar_datos_disponibilidades() #Agregado por Jimena por el RF-11 y RF-12
-        self.cargar_datos_tareas()
+        self.cargar_datos_disponibilidades() #Agregado por Jimena por el RF-11 y RF-1
         self.cargar_datos_eventos()
+        self.cargar_datos_tareas()
         self.cargar_metricas_tareas()             #Agregado por Jimena por el RF-17
         self.cargar_eventos_con_tareas_vencidas()  #Agregado por Jimena por el RF-16
     

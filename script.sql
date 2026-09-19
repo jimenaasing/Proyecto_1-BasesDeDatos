@@ -173,4 +173,3 @@ INSERT INTO tipos_disponibilidad (nombre) VALUES
 ('ocupado'), 
 ('no disponible');
 ALTER TABLE tareas RENAME COLUMN id_eventos TO id_evento;
-ALTER TABLE tareas RENAME COLUMN id_eventos TO id_evento;
